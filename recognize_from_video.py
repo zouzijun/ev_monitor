@@ -7,8 +7,6 @@ import numpy as np
 
 # Encoding file folder
 encoding_file = "./encoding_files"
-# Load font
-ft = ft2.put_chinese_text('Deng.ttf')
 # Video Capture
 video_capture = cv2.VideoCapture(0)
 # Encoding dictionary
@@ -35,6 +33,8 @@ while True:
             match = face_recognition.compare_faces([v], face_encoding, tolerance=0.35)
             if match[0]:
                 name = k
+                # face_distances = face_recognition.face_distance([v], face_encoding)
+                # print(face_distances)
                 break
         # Mark name on frame
         cv2.rectangle(frame, (left, top), (right, bottom), (255, 102, 0), 2)
