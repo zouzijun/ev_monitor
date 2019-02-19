@@ -4,7 +4,7 @@ import sys
 import time
 
 # Config constants
-MAX_CMD_SIZE = 32
+MAX_CMD_SIZE = 64
 WAIT_TIME_CMD_SEND = 1
 WAIT_TIME_FILE_SEND = 5
 

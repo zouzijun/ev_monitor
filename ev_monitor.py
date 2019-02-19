@@ -9,6 +9,7 @@ import time
 # Config constants
 SERVER_IP = "192.168.1.152"
 SERVER_PORT = "8888"
+EV_PLATE_NUM = "沪A 12345"
 USER_PHOTO_PATH = "./ev_data/user_photo.png"
 DRIVER_PHOTO_PATH = "./ev_data/driver_photo.png"
 PRE_IMAGE_PATH = "./ev_data/inner_pre.png"
@@ -22,14 +23,14 @@ STAT_END = "end"
 STAT_TERM = "terminate"
 
 # Communication statements for send
-COM_READY = "ready_for_rent"
+COM_READY = "ReadyRorRent_"
 COM_REQUIRE_USER_PHOTO = "require_user_photo"
 COM_USER_PHOTO_SIZE_RECEIVED = "user_photo_size_received"
 COM_USER_PHOTO_DATA_RECEIVED = "user_photo_data_received"
 COM_DRIVING_START = "driving_start"
-COM_DRIVING_END = "driving_end"
-COM_RENT_END = "rent_end"
+COM_DRIVING_END = "DrivingEnd_"
 COM_REQUIRE_AFTERMATH = "require_aftermath"
+COM_COMPLETE = "complete"
 
 # Communication statements for receive
 COM_RENT_START = "start_rent"
@@ -57,6 +58,7 @@ class ProgState(Enum):
     SEND_DRIVER_PHOTO = 9
     SEND_MESS_DATA = 10
     WAIT_AFTERMATH = 11
+    FORCE_TERMINATE = 12
     UNKNOWN = -1
 
 
@@ -71,6 +73,8 @@ class EV(threading.Thread):
 
     def run(self):
         while True:
+            if self.state == ProgState.IGN_OFF:
+                pass
             if self.state == ProgState.IGN_ON:
                 self.connect_server()
             elif self.state == ProgState.INIT:
@@ -93,7 +97,7 @@ class EV(threading.Thread):
                 self.send_mess_data()
             elif self.state == ProgState.WAIT_AFTERMATH:
                 self.wait_for_aftermath_done()
-            elif self.state == ProgState.UNKNOWN:
+            elif self.state == ProgState.FORCE_TERMINATE:
                 self.terminate_sys()
             else:
                 print("> Error: Inner state error.")
@@ -109,7 +113,7 @@ class EV(threading.Thread):
             self.state = ProgState.EV_DRIVING_END
         if str(operation) == STAT_TERM:
             print("> Terminating system...")
-            self.state = ProgState.UNKNOWN
+            self.state = ProgState.FORCE_TERMINATE
 
     def connect_server(self):
         # Construct tcp connection
@@ -118,7 +122,8 @@ class EV(threading.Thread):
         self.state = ProgState.INIT
 
     def send_ready_statement(self):
-        self.tcp_socket.send_command(COM_READY)
+        # Inform server the EV is ready for rent as well as plate number
+        self.tcp_socket.send_command(COM_READY + EV_PLATE_NUM)
         print("> EV ready for rent.")
         self.state = ProgState.READY
 
@@ -176,7 +181,8 @@ class EV(threading.Thread):
         # Construct tcp connection
         self.tcp_socket = tcp(SERVER_IP, SERVER_PORT)
         print("> Server connected.")
-        self.tcp_socket.send_command(COM_DRIVING_END)
+        # Inform server the EV is ready for restore as well as plate number
+        self.tcp_socket.send_command(COM_DRIVING_END + EV_PLATE_NUM)
         print("> EV driving end, waiting for restore command.")
         self.state = ProgState.WAIT_RESTORE
 
@@ -261,7 +267,7 @@ class EV(threading.Thread):
                     time.sleep(RESEND_INTERVAL)
                     print("> Warning: resend mess data.")
             else:
-                self.tcp_socket.send_command(COM_RENT_END)
+                self.tcp_socket.send_command(COM_COMPLETE)
                 self.tcp_socket.close()
                 self.tcp_socket = None
                 self.state = ProgState.IGN_OFF
@@ -321,7 +327,7 @@ class EV(threading.Thread):
                         time.sleep(RESEND_INTERVAL)
                         print("> Warning: resend mess data.")
                 else:
-                    self.tcp_socket.send_command(COM_RENT_END)
+                    self.tcp_socket.send_command(COM_COMPLETE)
                     self.tcp_socket.close()
                     self.tcp_socket = None
                     self.state = ProgState.IGN_OFF
@@ -336,7 +342,8 @@ class EV(threading.Thread):
         if self.tcp_socket:
             self.tcp_socket.close()
             self.tcp_socket = None
-        print("> System terminated.")
+            print("> System terminated.")
+        self.state = ProgState.IGN_OFF
 
 
 def take_cabin_photo_pre():
