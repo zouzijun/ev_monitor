@@ -19,8 +19,13 @@ class tcp:
             print("Error creating socket: %s" % e)
             sys.exit(1)
         # Connect server
+        if isinstance(port, str):
+            _port = int(port)
+        else:
+            _port = port
         try:
-            self.tcp_socket.connect((ip, port))
+            self.tcp_socket.connect((ip, _port))
+            print("Network connected.")
         except socket.gaierror as e:
             print("Address-related error connecting to server: %s" % e)
             sys.exit(1)
@@ -41,7 +46,7 @@ class tcp:
         return binary_data
 
     def send_command(self, command):
-        if command:
+        if command is not None:
             if isinstance(command, str):
                 cmd = command
             else:
