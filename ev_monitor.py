@@ -75,7 +75,7 @@ class EV(threading.Thread):
         while True:
             if self.state == ProgState.IGN_OFF:
                 pass
-            if self.state == ProgState.IGN_ON:
+            elif self.state == ProgState.IGN_ON:
                 self.connect_server()
             elif self.state == ProgState.INIT:
                 self.send_ready_statement()
